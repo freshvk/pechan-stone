@@ -21,6 +21,8 @@
     --wa-ink: #ffffff;
     --ig: #2a3138;
     --ig-ink: #ffffff;
+    --overlay: rgba(16, 20, 23, 0.55);
+    --overlay-ink: #ffffff;
     --font-display: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
     --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   }
@@ -115,7 +117,92 @@
   .arrow { margin-left: auto; flex: none; width: 22px; height: 22px; opacity: 0.8; }
 
   footer { font-size: 13px; color: var(--muted); }
-  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+
+  /* Carrusel de fotos: se desliza con el dedo (scroll-snap), con flechas y puntos. */
+  .gallery { display: flex; flex-direction: column; gap: 14px; }
+  .gallery-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .gallery-head h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+  }
+  .count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .slider { position: relative; }
+  .track {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    border-radius: 18px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .track::-webkit-scrollbar { display: none; }
+  .track:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .slide {
+    flex: 0 0 100%;
+    min-width: 0;
+    margin: 0;
+    aspect-ratio: 1 / 1;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--line);
+    scroll-snap-align: center;
+    transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.5s ease;
+  }
+  .slide img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .slider.is-ready .slide:not(.is-active) { opacity: 0.5; transform: scale(0.94); }
+
+  .nav {
+    position: absolute;
+    top: 50%;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    background: var(--overlay);
+    color: var(--overlay-ink);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    transform: translateY(-50%);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .nav svg { width: 20px; height: 20px; }
+  .nav.prev { left: 10px; }
+  .nav.next { right: 10px; }
+  .nav:hover { transform: translateY(-50%) scale(1.08); }
+  .nav:active { transform: translateY(-50%) scale(0.94); }
+  .nav:focus-visible { outline: 3px solid var(--overlay-ink); outline-offset: 2px; }
+
+  .dots { display: flex; justify-content: center; align-items: center; gap: 10px; min-height: 8px; }
+  .dots button {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 99px;
+    cursor: pointer;
+    background: var(--muted);
+    opacity: 0.4;
+    transition: width 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.35s ease, background 0.35s ease;
+  }
+  .dots button::before { content: ""; position: absolute; inset: -12px -5px; }
+  .dots button[aria-current="true"] { width: 24px; opacity: 1; background: var(--ink); }
+  .dots button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn, .slide, .nav, .dots button { transition: none; }
+    .track { scroll-behavior: auto; }
+  }
 </style>
 
 </head>
@@ -157,6 +244,108 @@
   </nav>
 
   <footer>Escríbenos por WhatsApp para cotizar o ver más diseños.</footer>
+
+  <section class="gallery" aria-labelledby="gallery-title">
+    <div class="gallery-head">
+      <h2 id="gallery-title">Nuestros trabajos</h2>
+      <span class="count" id="count">1 / 5</span>
+    </div>
+
+    <div class="slider" id="slider">
+      <div class="track" id="track" tabindex="0" role="group" aria-roledescription="carrusel" aria-label="Fotos de cocinas">
+        <figure class="slide is-active">
+          <img src="img/cocina-1.jpg" width="960" height="960" decoding="async" alt="Cocina con isla de cubierta negra, muebles oscuros y piso de porcelanato">
+        </figure>
+        <figure class="slide">
+          <img src="img/cocina-2.jpg" width="960" height="960" loading="lazy" decoding="async" alt="Cocina moderna con isla negra y cuatro banquetas altas">
+        </figure>
+        <figure class="slide">
+          <img src="img/cocina-3.jpg" width="960" height="960" loading="lazy" decoding="async" alt="Cocina con muebles grises brillantes, cubierta oscura y banquetas">
+        </figure>
+        <figure class="slide">
+          <img src="img/cocina-4.jpg" width="737" height="894" loading="lazy" decoding="async" alt="Cocina angosta con cubierta blanca, muebles grises y encimera de gas negra">
+        </figure>
+        <figure class="slide">
+          <img src="img/cocina-5.jpg" width="738" height="905" loading="lazy" decoding="async" alt="Cocina con muebles grises brillantes y cajones abiertos">
+        </figure>
+      </div>
+
+      <button class="nav prev" id="prev" type="button" aria-label="Foto anterior">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+      </button>
+      <button class="nav next" id="next" type="button" aria-label="Foto siguiente">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <div class="dots" id="dots"></div>
+  </section>
 </main>
+
+<script>
+(function () {
+  var slider = document.getElementById('slider');
+  var track = document.getElementById('track');
+  if (!slider || !track) return;
+  var slides = Array.prototype.slice.call(track.children);
+  var dotsWrap = document.getElementById('dots');
+  var count = document.getElementById('count');
+  var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var index = 0, raf = 0, timer = 0, inView = true;
+
+  function step() {
+    return slides.length > 1 ? slides[1].offsetLeft - slides[0].offsetLeft : track.clientWidth;
+  }
+  function goTo(i) {
+    i = (i + slides.length) % slides.length;
+    track.scrollTo({ left: i * step(), behavior: reduce ? 'auto' : 'smooth' });
+  }
+
+  var dots = slides.map(function (_, n) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Ir a la foto ' + (n + 1));
+    b.addEventListener('click', function () { stop(); goTo(n); });
+    dotsWrap.appendChild(b);
+    return b;
+  });
+
+  function update() {
+    raf = 0;
+    var s = step() || 1;
+    var i = Math.max(0, Math.min(slides.length - 1, Math.round(track.scrollLeft / s)));
+    index = i;
+    slides.forEach(function (el, n) { el.classList.toggle('is-active', n === i); });
+    dots.forEach(function (d, n) { d.setAttribute('aria-current', n === i ? 'true' : 'false'); });
+    if (count) count.textContent = (i + 1) + ' / ' + slides.length;
+  }
+
+  function stop() { if (timer) { clearInterval(timer); timer = 0; } }
+  function start() {
+    if (reduce || slides.length < 2) return;
+    timer = setInterval(function () {
+      if (!document.hidden && inView) goTo(index + 1);
+    }, 4500);
+  }
+
+  track.addEventListener('scroll', function () { if (!raf) raf = requestAnimationFrame(update); }, { passive: true });
+  ['pointerdown', 'touchstart', 'wheel', 'keydown'].forEach(function (ev) {
+    track.addEventListener(ev, stop, { passive: true });
+  });
+  document.getElementById('prev').addEventListener('click', function () { stop(); goTo(index - 1); });
+  document.getElementById('next').addEventListener('click', function () { stop(); goTo(index + 1); });
+  window.addEventListener('resize', function () {
+    track.scrollTo({ left: index * step(), behavior: 'auto' });
+  });
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) { inView = entries[0].isIntersecting; }, { threshold: 0.5 }).observe(slider);
+  }
+
+  slider.classList.add('is-ready');
+  update();
+  start();
+})();
+</script>
 </body>
 </html>
