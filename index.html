@@ -23,6 +23,7 @@
     --ig-ink: #ffffff;
     --overlay: rgba(16, 20, 23, 0.55);
     --overlay-ink: #ffffff;
+    --video-bg: #0e1214;
     --font-display: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
     --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   }
@@ -154,7 +155,48 @@
     scroll-snap-align: center;
     transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.5s ease;
   }
+  .slide { position: relative; }
   .slide img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+  /* Videos verticales: se ven completos sobre un fondo con la misma imagen desenfocada. */
+  .slide.video { background: var(--video-bg); }
+  .slide.video::before {
+    content: "";
+    position: absolute;
+    inset: -24px;
+    background: var(--poster) center / cover no-repeat;
+    filter: blur(22px) brightness(0.6);
+  }
+  .slide video {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    cursor: pointer;
+    background: transparent;
+  }
+  .slide video:focus-visible { outline: 3px solid var(--overlay-ink); outline-offset: -6px; }
+  .play {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--overlay);
+    color: var(--overlay-ink);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.85);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .play svg { width: 26px; height: 26px; margin-left: 3px; }
+  .slide.is-paused .play { opacity: 1; transform: scale(1); }
   .slider.is-ready .slide:not(.is-active) { opacity: 0.5; transform: scale(0.94); }
 
   .nav {
@@ -200,7 +242,7 @@
   .dots button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 
   @media (prefers-reduced-motion: reduce) {
-    .btn, .slide, .nav, .dots button { transition: none; }
+    .btn, .slide, .nav, .dots button, .play { transition: none; }
     .track { scroll-behavior: auto; }
   }
 </style>
@@ -248,7 +290,7 @@
   <section class="gallery" aria-labelledby="gallery-title">
     <div class="gallery-head">
       <h2 id="gallery-title">Nuestros trabajos</h2>
-      <span class="count" id="count">1 / 5</span>
+      <span class="count" id="count">1 / 9</span>
     </div>
 
     <div class="slider" id="slider">
@@ -267,6 +309,22 @@
         </figure>
         <figure class="slide">
           <img src="img/cocina-5.jpg" width="738" height="905" loading="lazy" decoding="async" alt="Cocina con muebles grises brillantes y cajones abiertos">
+        </figure>
+        <figure class="slide video" style="--poster: url('img/video-1.jpg')">
+          <video src="img/video-1.mp4" poster="img/video-1.jpg" width="576" height="1248" muted playsinline controls preload="metadata" tabindex="0" aria-label="Video: cubierta de cocina de piedra blanca con vetas. Toca para pausar o reproducir."></video>
+          <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg></span>
+        </figure>
+        <figure class="slide video" style="--poster: url('img/video-2.jpg')">
+          <video src="img/video-2.mp4" poster="img/video-2.jpg" width="464" height="832" muted playsinline controls preload="metadata" tabindex="0" aria-label="Video: cocina con muebles blancos y horno empotrado. Toca para pausar o reproducir."></video>
+          <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg></span>
+        </figure>
+        <figure class="slide video" style="--poster: url('img/video-3.jpg')">
+          <video src="img/video-3.mp4" poster="img/video-3.jpg" width="464" height="832" muted playsinline controls preload="metadata" tabindex="0" aria-label="Video: mueble de cocina gris con cubierta y frontis de piedra blanca con vetas. Toca para pausar o reproducir."></video>
+          <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg></span>
+        </figure>
+        <figure class="slide video" style="--poster: url('img/video-4.jpg')">
+          <video src="img/video-4.mp4" poster="img/video-4.jpg" width="288" height="384" muted playsinline controls preload="metadata" tabindex="0" aria-label="Video: cubierta de piedra blanca con vetas y lavaplatos empotrado. Toca para pausar o reproducir."></video>
+          <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg></span>
         </figure>
       </div>
 
@@ -291,7 +349,7 @@
   var dotsWrap = document.getElementById('dots');
   var count = document.getElementById('count');
   var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  var index = 0, raf = 0, timer = 0, inView = true;
+  var index = 0, raf = 0, timer = 0, inView = true, resumeVideo = null;
 
   function step() {
     return slides.length > 1 ? slides[1].offsetLeft - slides[0].offsetLeft : track.clientWidth;
@@ -314,17 +372,30 @@
     raf = 0;
     var s = step() || 1;
     var i = Math.max(0, Math.min(slides.length - 1, Math.round(track.scrollLeft / s)));
+    var changed = i !== index || !slides[i].classList.contains('is-active');
     index = i;
     slides.forEach(function (el, n) { el.classList.toggle('is-active', n === i); });
     dots.forEach(function (d, n) { d.setAttribute('aria-current', n === i ? 'true' : 'false'); });
     if (count) count.textContent = (i + 1) + ' / ' + slides.length;
+    slides.forEach(function (el, n) {
+      var v = videoOf(el);
+      if (!v) return;
+      if (n === i) { if (changed) { v.currentTime = 0; play(v); } }
+      else if (!v.paused) { v.pause(); }
+    });
   }
+
+  function videoOf(el) { return el ? el.querySelector('video') : null; }
+  function play(v) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
 
   function stop() { if (timer) { clearInterval(timer); timer = 0; } }
   function start() {
     if (reduce || slides.length < 2) return;
     timer = setInterval(function () {
-      if (!document.hidden && inView) goTo(index + 1);
+      if (document.hidden || !inView) return;
+      var v = videoOf(slides[index]);
+      if (v && !v.paused && !v.ended) return; // deja terminar el video
+      goTo(index + 1);
     }, 4500);
   }
 
@@ -332,6 +403,24 @@
   ['pointerdown', 'touchstart', 'wheel', 'keydown'].forEach(function (ev) {
     track.addEventListener(ev, stop, { passive: true });
   });
+  slides.forEach(function (el) {
+    var v = videoOf(el);
+    if (!v) return;
+    v.controls = false;
+    v.removeAttribute('controls');
+    function sync() { el.classList.toggle('is-paused', v.paused); }
+    ['play', 'playing', 'pause', 'ended'].forEach(function (ev) { v.addEventListener(ev, sync); });
+    v.addEventListener('ended', function () {
+      if (timer) { goTo(index + 1); } else { v.currentTime = 0; play(v); }
+    });
+    function toggle() { if (v.paused) { play(v); } else { v.pause(); } }
+    v.addEventListener('click', toggle);
+    v.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+    sync();
+  });
+
   document.getElementById('prev').addEventListener('click', function () { stop(); goTo(index - 1); });
   document.getElementById('next').addEventListener('click', function () { stop(); goTo(index + 1); });
   window.addEventListener('resize', function () {
@@ -339,7 +428,12 @@
   });
 
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (entries) { inView = entries[0].isIntersecting; }, { threshold: 0.5 }).observe(slider);
+    new IntersectionObserver(function (entries) {
+      inView = entries[0].isIntersecting;
+      var v = videoOf(slides[index]);
+      if (!inView && v && !v.paused) { v.pause(); resumeVideo = v; }
+      else if (inView && resumeVideo) { play(resumeVideo); resumeVideo = null; }
+    }, { threshold: 0.5 }).observe(slider);
   }
 
   slider.classList.add('is-ready');
